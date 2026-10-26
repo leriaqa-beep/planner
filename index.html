@@ -176,6 +176,14 @@ body.wide .wrap{max-width:1320px}
 .coladd{border:0;border-top:1px solid var(--line);background:transparent;color:var(--muted);padding:8px;font-size:13px;border-radius:0 0 12px 12px}
 .coladd:hover{color:var(--accent);background:var(--accent-soft)}
 .cards .card:focus-visible,.cttl:focus-visible,.cn:focus-visible,.planbtn:focus-visible,.coladd:focus-visible,.viewsw button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grip{border:0;background:none;color:var(--muted);cursor:grab;touch-action:none;padding:2px 5px;font-size:15px;line-height:1;border-radius:5px;font-family:var(--f-body)}
+.grip:hover{color:var(--ink);background:var(--accent-soft)}
+.task .grip{display:block;margin:0 0 2px auto}
+.card{position:relative;padding-right:26px}
+.card .grip{position:absolute;top:4px;right:3px}
+.placeholder{opacity:.35;border-style:dashed!important}
+.ghost{position:fixed;z-index:40;pointer-events:none;box-shadow:0 12px 30px rgba(10,14,25,.28);margin:0}
+body.dragging,body.dragging *{user-select:none;-webkit-user-select:none;cursor:grabbing!important}
 .backup{margin-top:28px;border-top:1px solid var(--line);padding-top:18px;display:grid;gap:10px}
 .backup h3{font-family:var(--f-display);font-weight:500;font-size:16px;margin:0}
 .backup p{margin:0;font-size:13.5px;color:var(--muted)}
@@ -227,7 +235,7 @@ body.wide .wrap{max-width:1320px}
         <button class="btn" id="printPlan">Печать плана</button>
       </div>
     </div>
-    <p class="hours">Пул — задачи без даты. Перетащите карточку в нужный день или нажмите «В план». Чтобы вернуть задачу в пул, перетащите её обратно.</p>
+    <p class="hours">Пул — задачи без даты. Тяните карточку за ⠿: в нужный день, выше или ниже по порядку. Можно и кнопкой «В план». Чтобы вернуть задачу в пул, перетащите её обратно.</p>
     <div class="board" id="board"></div>
   </div>
 
@@ -509,7 +517,7 @@ function render(){
   $("focus").innerHTML=`<div class="focus"><h3>Главное на день</h3>${stars.length?`<ol>${stars.map(t=>`<li class="${t.done?"done":""}">${esc(t.title)}</li>`).join("")}</ol>`:`<p>Отметьте ☆ до трёх задач, которые важнее всего сделать сегодня.</p>`}</div>`;
 
   const conf=conflicts(day);
-  const list=$("list");list.innerHTML="";
+  const list=$("list");list.innerHTML="";list.dataset.drop=day;
   if(!items.length)list.innerHTML=`<div class="empty">На этот день задач нет.<br>Добавьте задачу или перенесите сюда незакрытую.</div>`;
   for(const t of items){
     const el=document.createElement("div");
@@ -519,12 +527,14 @@ function render(){
     if(t.waiting&&!t.done)flags.push(`<span class="flag w">Ждём ответа${t.waitSince?` с ${fmtShort(t.waitSince)}`:""}${t.waitFor?`: ${esc(t.waitFor)}`:""} · напомнить</span>`);
     if(conf[t.id])flags.push(`<span class="flag x">${esc([...new Set(conf[t.id])].join(", "))}</span>`);
     if(t.moves?.length)flags.push(`<span class="flag m" title="${esc(t.moves.map(m=>`${fmtShort(m.from)} → ${fmtShort(m.to)}${m.reason?": "+m.reason:""}`).join("; "))}">перенос ×${t.moves.length}</span>`);
-    el.innerHTML=`<div class="time"><b>${esc(t.start||"")}</b>${esc(t.end||"")}</div>
+    el.dataset.id=t.id;
+    el.innerHTML=`<div class="time"><button class="grip" aria-label="Перетащить: поменять порядок и время" title="Потяните, чтобы поменять порядок">⠿</button><b>${esc(t.start||"")}</b>${esc(t.end||"")}</div>
       <button class="check" aria-label="${t.done?"Снять отметку":"Отметить выполненной"}">${checkSvg}</button>
       <div class="body"><div class="title">${t.important?'<span class="s" aria-label="Главное">★</span>':""}${esc(t.title)}</div>${t.note?`<div class="note">${esc(t.note)}</div>`:""}<div class="tags"><span class="chip">${esc(PROJECTS[t.project]||"Прочее")}</span>${flags.join("")}</div></div>
       <div class="tools"><button data-a="star" class="${t.important?"on":""}" aria-pressed="${!!t.important}" title="Главное на день">${t.important?"★":"☆"}</button><button data-a="wait">Жду ответа</button><button data-a="move">Перенести</button><button data-a="edit">Изменить</button></div>`;
     el.querySelector(".check").onclick=()=>store.save({...t,done:!t.done,waiting:t.done?t.waiting:false});
     el.querySelector('[data-a="edit"]').onclick=()=>openForm(t);
+    wireGrip(el,t);
     el.querySelector('[data-a="move"]').onclick=()=>openAct("move",t);
     el.querySelector('[data-a="wait"]').onclick=()=>openAct("wait",t);
     el.querySelector('[data-a="star"]').onclick=()=>{
@@ -562,31 +572,126 @@ function renderBoard(){
     col.innerHTML=`<div class="colhead"><button class="cn" ${c.d?"":"disabled"}>${c.name}${c.d===TODAY?" · сегодня":""}${Object.keys(conf).length?'<span class="warnDot" style="width:6px;height:6px;border-radius:50%;background:var(--warn)"></span>':""}</button>${meta}</div><div class="cards"></div><button class="coladd">+ добавить</button>`;
     if(c.d)col.querySelector(".cn").onclick=()=>{day=c.d;setView("day")};
     col.querySelector(".coladd").onclick=()=>openForm(null,{date:c.d});
-    const cards=col.querySelector(".cards");
+    const cards=col.querySelector(".cards");cards.dataset.drop=c.d;
     if(!list.length)cards.innerHTML=`<div class="hint">${c.d?"Пусто. Перетащите сюда задачу из пула.":"Складывайте сюда задачи без даты, потом распределяйте по дням."}</div>`;
     for(const t of list){
       const el=document.createElement("div");
       el.className="card"+(t.done?" done":"")+(t.important?" star":"")+(conf[t.id]?" conflict":"");
       el.style.setProperty("--pc",`var(--p-${PROJECTS[t.project]?t.project:"other"})`);
-      el.draggable=true;el.innerHTML=cardHtml(t,conf[t.id]);
-      el.addEventListener("dragstart",e=>{e.dataTransfer.setData("text/plain",t.id);e.dataTransfer.effectAllowed="move";el.classList.add("dragging")});
-      el.addEventListener("dragend",()=>el.classList.remove("dragging"));
+      el.dataset.id=t.id;el.innerHTML=cardHtml(t,conf[t.id])+'<button class="grip" aria-label="Перетащить" title="Потяните, чтобы перенести или поменять порядок">⠿</button>';
+      wireGrip(el,t);
       el.querySelector(".check").onclick=()=>store.save({...t,done:!t.done,waiting:t.done?t.waiting:false});
       el.querySelector(".cttl").onclick=()=>openForm(t);
       const pb=el.querySelector(".planbtn");if(pb)pb.onclick=()=>openAct("plan",t);
       cards.appendChild(el);
     }
-    col.addEventListener("dragover",e=>{e.preventDefault();col.classList.add("dragover")});
-    col.addEventListener("dragleave",e=>{if(!col.contains(e.relatedTarget))col.classList.remove("dragover")});
-    col.addEventListener("drop",async e=>{
-      e.preventDefault();col.classList.remove("dragover");
-      const t=tasks.find(x=>x.id===e.dataTransfer.getData("text/plain"));if(!t||t.date===c.d)return;
-      const n=scheduled(t,c.d);
-      try{await store.save(n);toast(c.d?`${fmtShort(c.d)}${n.start?", "+n.start:""}`:"Возвращено в пул")}catch(err){toast("Не удалось сохранить")}
-    });
     b.appendChild(col);
   }
 }
+/* ---------- drag to reorder / move ---------- */
+function fit(d,cursor,len){
+  const ws=windows(d);if(!ws.length)return cursor;
+  const lunch=wd(d)<5?[780,810]:null;let a=cursor;
+  for(const[s,e]of ws){
+    if(a<s)a=s;
+    if(lunch&&a<lunch[1]&&a+len>lunch[0])a=Math.max(a,lunch[1]);
+    if(a+len<=e)return a;
+  }
+  return Math.max(cursor,0);
+}
+async function applyDrop(t,d,ids){
+  if(d===""){if(t.date){await store.save(scheduled(t,""));toast("Возвращено в пул")}else render();return}
+  const list=ids.map(id=>id===t.id?t:tasks.find(x=>x.id===id)).filter(Boolean);
+  const newIdx=ids.indexOf(t.id);const same=t.date===d;const orig=tasksOn(d);
+  let from,maxAff,cursor;
+  if(same){
+    const old=orig.findIndex(x=>x.id===t.id);if(old===newIdx){render();return}
+    from=Math.min(old,newIdx);maxAff=Math.max(old,newIdx);
+    cursor=mins(orig[from].start)??570;
+  }else{
+    from=newIdx;maxAff=newIdx;const prev=list[newIdx-1];
+    cursor=prev?(mins(prev.end)??(mins(prev.start)??570)+est(prev)):(windows(d)[0]?.[0]??570);
+  }
+  const ups=[];
+  for(let k=from;k<list.length;k++){
+    const x=list[k];const len=est(x);const cur=mins(x.start);
+    if(k>maxAff&&x.date===d&&cur!=null&&cur>=cursor)break;
+    const a=fit(d,cursor,len);
+    let n={...x,start:hm(a),end:hm(Math.min(a+len,1439))};
+    if(x.id===t.id&&!same)n=x.date?{...moved(x,d,""),start:n.start,end:n.end}:{...x,date:d,start:n.start,end:n.end,est:len};
+    if(n.start!==x.start||n.end!==x.end||n.date!==x.date)ups.push(n);
+    cursor=a+len;
+  }
+  if(!ups.length){render();return}
+  try{for(const n of ups)await store.save(n);
+    const me=ups.find(n=>n.id===t.id);
+    toast(me?`${same?"":fmtShort(d)+", "}${me.start}–${me.end}${ups.length>1?` · сдвинуто задач: ${ups.length-1}`:""}`:"Порядок обновлён");
+  }catch(e){toast("Не удалось сохранить");render()}
+}
+let drag=null;
+function wireGrip(el,t){
+  const g=el.querySelector(".grip");if(!g)return;
+  g.addEventListener("pointerdown",e=>beginDrag(e,el,t));
+  g.addEventListener("click",e=>e.preventDefault());
+  g.addEventListener("keydown",e=>{
+    if(e.key!=="ArrowUp"&&e.key!=="ArrowDown")return;e.preventDefault();
+    const box=el.parentElement;const ids=[...box.querySelectorAll(":scope > [data-id]")].map(x=>x.dataset.id);
+    const i=ids.indexOf(t.id),j=e.key==="ArrowUp"?i-1:i+1;if(j<0||j>=ids.length)return;
+    [ids[i],ids[j]]=[ids[j],ids[i]];applyDrop(t,box.dataset.drop,ids);
+  });
+}
+function beginDrag(e,el,t){
+  if(e.pointerType==="mouse"&&e.button!==0)return;
+  e.preventDefault();
+  const r=el.getBoundingClientRect();
+  const ghost=el.cloneNode(true);ghost.classList.add("ghost");
+  Object.assign(ghost.style,{width:r.width+"px",left:r.left+"px",top:r.top+"px"});
+  document.body.appendChild(ghost);
+  drag={t,el,ghost,dx:e.clientX-r.left,dy:e.clientY-r.top,x:e.clientX,y:e.clientY,parent:el.parentElement,next:el.nextSibling,moved:false,timer:null};
+  document.body.classList.add("dragging");
+  document.addEventListener("pointermove",onDragMove);
+  document.addEventListener("pointerup",onDragEnd);
+  document.addEventListener("pointercancel",onDragCancel);
+  drag.timer=setInterval(dragTick,30);
+}
+function onDragMove(e){
+  if(!drag)return;e.preventDefault();
+  if(!drag.moved&&Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>4){drag.moved=true;drag.el.classList.add("placeholder")}
+  drag.x=e.clientX;drag.y=e.clientY;place();
+}
+function place(){
+  if(!drag?.moved)return;
+  drag.ghost.style.left=(drag.x-drag.dx)+"px";drag.ghost.style.top=(drag.y-drag.dy)+"px";
+  const box=document.elementFromPoint(drag.x,drag.y)?.closest("[data-drop]");
+  document.querySelectorAll(".col.dragover").forEach(c=>c.classList.remove("dragover"));
+  if(!box)return;
+  box.closest(".col")?.classList.add("dragover");
+  const sib=[...box.querySelectorAll(":scope > [data-id]")].filter(x=>x!==drag.el);
+  const ref=sib.find(x=>{const r=x.getBoundingClientRect();return drag.y<r.top+r.height/2});
+  if(ref){if(ref.previousElementSibling!==drag.el||drag.el.parentElement!==box)box.insertBefore(drag.el,ref)}
+  else if(box.lastElementChild!==drag.el)box.appendChild(drag.el);
+}
+function dragTick(){
+  if(!drag?.moved)return;
+  const top=document.querySelector("header.top").getBoundingClientRect().bottom;
+  let sy=0;if(drag.y<top+50)sy=-14;else if(drag.y>innerHeight-50)sy=14;
+  if(sy){window.scrollBy(0,sy);place()}
+  const b=$("board");if(view==="week"&&b){const r=b.getBoundingClientRect();if(drag.y>r.top&&drag.y<r.bottom){if(drag.x<r.left+40)b.scrollLeft-=14;else if(drag.x>r.right-40)b.scrollLeft+=14;place()}}
+}
+function endDrag(){
+  clearInterval(drag.timer);drag.ghost.remove();drag.el.classList.remove("placeholder");
+  document.body.classList.remove("dragging");
+  document.querySelectorAll(".col.dragover").forEach(c=>c.classList.remove("dragover"));
+  document.removeEventListener("pointermove",onDragMove);document.removeEventListener("pointerup",onDragEnd);document.removeEventListener("pointercancel",onDragCancel);
+}
+function onDragEnd(){
+  if(!drag)return;const d=drag;endDrag();drag=null;
+  if(!d.moved)return;
+  const box=d.el.parentElement;if(!box?.dataset||!("drop" in box.dataset)){render();return}
+  const ids=[...box.querySelectorAll(":scope > [data-id]")].map(x=>x.dataset.id);
+  applyDrop(d.t,box.dataset.drop,ids);
+}
+function onDragCancel(){if(!drag)return;const d=drag;endDrag();drag=null;d.parent.insertBefore(d.el,d.next);render()}
 function nextWorkday(d){let x=addDays(parse(d),1);while(x.getDay()===0||x.getDay()===6)x=addDays(x,1);return ymd(x)}
 function moved(t,to,reason){
   if(to===t.date)return t;
