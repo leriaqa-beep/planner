@@ -94,6 +94,11 @@ textarea{min-height:64px;resize:vertical}
 .row{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px}
 .formbtns{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .danger{color:var(--warn)!important;border-color:var(--warn)!important}
+.backup{margin-top:28px;border-top:1px solid var(--line);padding-top:18px;display:grid;gap:10px}
+.backup h3{font-family:var(--f-display);font-weight:500;font-size:16px;margin:0}
+.backup p{margin:0;font-size:13.5px;color:var(--muted)}
+.backup p.warn{color:var(--warn)}
+.bkconfirm{background:var(--surface);border:1px solid var(--accent);border-radius:10px;padding:12px;display:grid;gap:10px;font-size:14px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:14px;z-index:30}
 @media (max-width:560px){
   .days{gap:4px}.tab .dn{font-size:10.5px;letter-spacing:.02em}.tab .dd{font-size:13px}
@@ -133,6 +138,23 @@ textarea{min-height:64px;resize:vertical}
   <div id="overdue"></div>
   <div class="list" id="list"></div>
   <div class="legend" id="legend"></div>
+  <section class="backup" aria-labelledby="bkTitle">
+    <h3 id="bkTitle">Резервная копия</h3>
+    <p id="bkInfo"></p>
+    <div class="actions">
+      <button class="btn" id="bkSave">Скачать бэкап</button>
+      <label class="btn" for="bkFile">Восстановить из файла</label>
+      <input type="file" id="bkFile" accept=".json,application/json" hidden>
+    </div>
+    <div class="bkconfirm" id="bkConfirm" hidden>
+      <div id="bkSummary"></div>
+      <div class="actions">
+        <button class="btn primary" id="bkMerge">Добавить к текущим</button>
+        <button class="btn danger" id="bkReplace">Заменить всё</button>
+        <button class="btn" id="bkCancel">Отмена</button>
+      </div>
+    </div>
+  </section>
   <p class="status" id="status">Загружаю задачи…</p>
 </main>
 
@@ -194,7 +216,8 @@ async function initStore(){
   tasks=localLoad();
   if(!seeded&&!tasks.length){tasks=SEED.map(t=>({...t}));localSave();try{localStorage.setItem("planner-seeded","1")}catch(e){}}
   store={save:async t=>{const i=tasks.findIndex(x=>x.id===t.id);i<0?tasks.push(t):tasks[i]=t;localSave();render()},
-         remove:async id=>{tasks=tasks.filter(x=>x.id!==id);localSave();render()}};
+         remove:async id=>{tasks=tasks.filter(x=>x.id!==id);localSave();render()},
+           bulk:async(list,replace)=>{if(replace)tasks=list.map(t=>({...t}));else{for(const t of list){const i=tasks.findIndex(x=>x.id===t.id);i<0?tasks.push(t):tasks[i]=t}}localSave();render()}};
   setStatus("Задачи хранятся в этом браузере. На другом устройстве список будет свой.");
   render();
 }
@@ -344,6 +367,55 @@ function offer(filename,html){
 $("printDay").onclick=()=>offer(`чек-лист-${day}.html`,printDoc([day],`Чек-лист ${day}`));
 $("printWeek").onclick=()=>{const ds=[0,1,2,3,4].map(i=>ymd(addDays(week,i)));offer(`чек-лист-неделя-${ds[0]}.html`,printDoc(ds,`Чек-лист недели ${ds[0]}`))};
 
+async function saveFile(filename,text){
+  try{const u=URL.createObjectURL(new Blob([text],{type:"application/json"}));const a=document.createElement("a");a.href=u;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),5000);return true}
+  catch(e){toast("Не удалось сохранить файл");return false}
+}
+
+/* ---------- backup ---------- */
+const BK_KEY="planner-last-backup";
+function lastBackup(){try{return localStorage.getItem(BK_KEY)}catch(e){return null}}
+function renderBackupInfo(){
+  const last=lastBackup();const el=$("bkInfo");
+  if(!last){el.textContent="Бэкап ещё не делался. Файл сохраняет все задачи, отметки и заметки.";el.className="warn";return}
+  const days=Math.round((parse(TODAY)-parse(last))/864e5);
+  el.textContent=`Последний бэкап: ${fmtShort(last)}`+(days>0?` (${days} дн. назад)`:" (сегодня)")+(days>=7?". Пора сделать новый.":"");
+  el.className=days>=7?"warn":"";
+}
+$("bkSave").onclick=async()=>{
+  const data=JSON.stringify({app:"planner",format:1,exportedAt:new Date().toISOString(),tasks},null,2);
+  const ok=await saveFile(`бэкап-ежедневника-${TODAY}.json`,data);
+  if(ok){try{localStorage.setItem(BK_KEY,TODAY)}catch(e){}renderBackupInfo();toast(`Бэкап сохранён: ${tasks.length} задач`)}
+};
+let pending=null;
+function clean(t){
+  if(!t||typeof t!=="object"||!/^\d{4}-\d{2}-\d{2}$/.test(t.date||"")||!String(t.title||"").trim())return null;
+  const tm=v=>/^\d{2}:\d{2}$/.test(v||"")?v:"";
+  return{id:String(t.id||uid()).replace(/[^A-Za-z0-9_\-.~:@+]/g,"").slice(0,60)||uid(),date:t.date,start:tm(t.start),end:tm(t.end),
+    title:String(t.title).slice(0,200),project:PROJECTS[t.project]?t.project:"other",note:String(t.note||"").slice(0,1000),done:!!t.done};
+}
+$("bkFile").addEventListener("change",async e=>{
+  const f=e.target.files[0];e.target.value="";if(!f)return;
+  let raw;try{raw=JSON.parse(await f.text())}catch(err){toast("Это не файл бэкапа: не удалось прочитать");return}
+  const list=(Array.isArray(raw)?raw:raw?.tasks||[]).map(clean).filter(Boolean);
+  if(!list.length){toast("В файле нет задач для восстановления");return}
+  pending=list;
+  const ds=list.map(t=>t.date).sort();
+  $("bkSummary").innerHTML=`В файле <b>${list.length}</b> задач с ${fmtShort(ds[0])} по ${fmtShort(ds[ds.length-1])}${raw?.exportedAt?`, бэкап от ${esc(raw.exportedAt.slice(0,10).split("-").reverse().join("."))}`:""}.<br>«Добавить» оставит текущие задачи и обновит совпадающие. «Заменить всё» удалит текущие (сейчас их ${tasks.length}).`;
+  $("bkReplace").textContent="Заменить всё";$("bkReplace").dataset.armed="";
+  $("bkConfirm").hidden=false;
+});
+$("bkCancel").onclick=()=>{pending=null;$("bkConfirm").hidden=true};
+$("bkMerge").onclick=async()=>{
+  if(!pending)return;const list=pending;pending=null;$("bkConfirm").hidden=true;
+  try{await store.bulk(list,false);toast(`Восстановлено: ${list.length}`)}catch(e){toast("Не удалось восстановить. Попробуйте ещё раз.")}
+};
+$("bkReplace").onclick=async()=>{
+  const b=$("bkReplace");if(!b.dataset.armed){b.dataset.armed="1";b.textContent="Точно заменить?";return}
+  if(!pending)return;const list=pending;pending=null;$("bkConfirm").hidden=true;
+  try{await store.bulk(list,true);toast(`Заменено: ${list.length} задач`)}catch(e){toast("Не удалось восстановить. Попробуйте ещё раз.")}
+};
+renderBackupInfo();
 initStore();
 </script>
 
