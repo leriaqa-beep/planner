@@ -184,6 +184,12 @@ body.wide .wrap{max-width:1320px}
 .placeholder{opacity:.35;border-style:dashed!important}
 .ghost{position:fixed;z-index:40;pointer-events:none;box-shadow:0 12px 30px rgba(10,14,25,.28);margin:0}
 body.dragging,body.dragging *{user-select:none;-webkit-user-select:none;cursor:grabbing!important}
+.task,.card{cursor:pointer}
+.task:hover,.card:hover{border-color:var(--accent)}
+.task.star:hover,.card.star:hover{border-color:var(--star)}
+button.title{border:0;background:none;padding:0;text-align:left;display:block;width:100%;font-size:inherit;line-height:inherit}
+.tools button.pen{display:grid;place-items:center;padding:4px 6px}
+.tools button.pen svg{width:16px;height:16px}
 .backup{margin-top:28px;border-top:1px solid var(--line);padding-top:18px;display:grid;gap:10px}
 .backup h3{font-family:var(--f-display);font-weight:500;font-size:16px;margin:0}
 .backup p{margin:0;font-size:13.5px;color:var(--muted)}
@@ -530,11 +536,13 @@ function render(){
     el.dataset.id=t.id;
     el.innerHTML=`<div class="time"><button class="grip" aria-label="Перетащить: поменять порядок и время" title="Потяните, чтобы поменять порядок">⠿</button><b>${esc(t.start||"")}</b>${esc(t.end||"")}</div>
       <button class="check" aria-label="${t.done?"Снять отметку":"Отметить выполненной"}">${checkSvg}</button>
-      <div class="body"><div class="title">${t.important?'<span class="s" aria-label="Главное">★</span>':""}${esc(t.title)}</div>${t.note?`<div class="note">${esc(t.note)}</div>`:""}<div class="tags"><span class="chip">${esc(PROJECTS[t.project]||"Прочее")}</span>${flags.join("")}</div></div>
-      <div class="tools"><button data-a="star" class="${t.important?"on":""}" aria-pressed="${!!t.important}" title="Главное на день">${t.important?"★":"☆"}</button><button data-a="wait">Жду ответа</button><button data-a="move">Перенести</button><button data-a="edit">Изменить</button></div>`;
+      <div class="body"><button class="title" aria-label="Открыть задачу: ${esc(t.title)}">${t.important?'<span class="s" aria-hidden="true">★</span>':""}${esc(t.title)}</button>${t.note?`<div class="note">${esc(t.note)}</div>`:""}<div class="tags"><span class="chip">${esc(PROJECTS[t.project]||"Прочее")}</span>${flags.join("")}</div></div>
+      <div class="tools"><button data-a="star" class="${t.important?"on":""}" aria-pressed="${!!t.important}" title="Главное на день">${t.important?"★":"☆"}</button><button data-a="wait">Жду ответа</button><button data-a="move">Перенести</button><button data-a="edit" class="pen" aria-label="Изменить" title="Изменить"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.6 3.4a1.9 1.9 0 0 1 2.7 2.7L7 15.4l-3.6.9.9-3.6z"/><path d="M12.2 4.8l2.9 2.9"/></svg></button></div>`;
     el.querySelector(".check").onclick=()=>store.save({...t,done:!t.done,waiting:t.done?t.waiting:false});
     el.querySelector('[data-a="edit"]').onclick=()=>openForm(t);
     wireGrip(el,t);
+    el.querySelector(".title").onclick=()=>openForm(t);
+    el.addEventListener("click",e=>{if(!e.target.closest("button,a,input"))openForm(t)});
     el.querySelector('[data-a="move"]').onclick=()=>openAct("move",t);
     el.querySelector('[data-a="wait"]').onclick=()=>openAct("wait",t);
     el.querySelector('[data-a="star"]').onclick=()=>{
@@ -580,6 +588,7 @@ function renderBoard(){
       el.style.setProperty("--pc",`var(--p-${PROJECTS[t.project]?t.project:"other"})`);
       el.dataset.id=t.id;el.innerHTML=cardHtml(t,conf[t.id])+'<button class="grip" aria-label="Перетащить" title="Потяните, чтобы перенести или поменять порядок">⠿</button>';
       wireGrip(el,t);
+      el.addEventListener("click",e=>{if(!e.target.closest("button,a,input"))openForm(t)});
       el.querySelector(".check").onclick=()=>store.save({...t,done:!t.done,waiting:t.done?t.waiting:false});
       el.querySelector(".cttl").onclick=()=>openForm(t);
       const pb=el.querySelector(".planbtn");if(pb)pb.onclick=()=>openAct("plan",t);
