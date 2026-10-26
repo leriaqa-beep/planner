@@ -4,13 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Ежедневник Лер</title>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-/* Layout: sticky week strip on top, one day column below — time rail on the left, task cards on the right, editor in a drawer */
+/* Layout: sticky week strip on top, week time budget, then one day column — time rail, task cards; editors open in a bottom sheet */
 :root{
   --bg:#F3F4F7; --surface:#FFFFFF; --ink:#1B2130; --muted:#646C80; --line:#DCDFE7;
   --accent:#2F49C9; --accent-soft:#E6EAFB; --done:#2E8B57; --warn:#C2410C; --warn-soft:#FDEDE4;
+  --wait:#8A6D1E; --wait-soft:#F7F0DC; --star:#D49B00;
   --f-display:"Unbounded","Golos Text",system-ui,sans-serif;
   --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
@@ -20,12 +22,14 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#12151C; --surface:#1B1F29; --ink:#E7EAF2; --muted:#9AA1B4; --line:#2C3242;
   --accent:#8EA2FF; --accent-soft:#232B4A; --done:#5CC28C; --warn:#FB923C; --warn-soft:#3A2418;
+  --wait:#E6C66A; --wait-soft:#33301E; --star:#F5C542;
   --p-leads:#8EA2FF; --p-course:#B794F6; --p-kp:#5EC4D8; --p-zalkar:#F0B35B; --p-jbn:#F17DB4;
   --p-artsky:#A3D45C; --p-add:#6CB8F0; --p-meder:#C4A5FF; --p-ads:#FB923C; --p-other:#A3ADC2;
   color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#12151C; --surface:#1B1F29; --ink:#E7EAF2; --muted:#9AA1B4; --line:#2C3242;
   --accent:#8EA2FF; --accent-soft:#232B4A; --done:#5CC28C; --warn:#FB923C; --warn-soft:#3A2418;
+  --wait:#E6C66A; --wait-soft:#33301E; --star:#F5C542;
   --p-leads:#8EA2FF; --p-course:#B794F6; --p-kp:#5EC4D8; --p-zalkar:#F0B35B; --p-jbn:#F17DB4;
   --p-artsky:#A3D45C; --p-add:#6CB8F0; --p-meder:#C4A5FF; --p-ads:#FB923C; --p-other:#A3ADC2;
   color-scheme:dark}
@@ -47,7 +51,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .btn:hover{border-color:var(--accent)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
 .btn.icon{padding:6px 10px;font-family:var(--f-mono)}
-.btn:focus-visible,.tab:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.check:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn:focus-visible,.tab:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.check:focus-visible,.tools button:focus-visible,.pill:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
 .tab{border:1px solid var(--line);background:transparent;border-radius:10px;padding:6px 4px 7px;display:grid;gap:2px;justify-items:center;min-width:0}
 .tab .dn{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
@@ -57,14 +61,44 @@ button{font:inherit;color:inherit;cursor:pointer}
 .tab.today .dd{color:var(--accent)}
 .tab.active{background:var(--accent-soft);border-color:var(--accent)}
 .tab.weekend{opacity:.6}
+.tab .warnDot{width:6px;height:6px;border-radius:50%;background:var(--warn)}
+
+/* week budget */
+.week{margin-top:18px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:12px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.kpi{display:grid;gap:1px;min-width:0}
+.kpi small{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.kpi b{font-family:var(--f-mono);font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.kpi b.neg{color:var(--warn)}
+.stack{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line)}
+.stack i{display:block;height:100%;background:var(--pc)}
+.plegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--muted)}
+.plegend span{white-space:nowrap}
+.plegend span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--pc);margin-right:5px;vertical-align:1px}
+.plegend b{font-family:var(--f-mono);font-weight:600;color:var(--ink);margin-left:3px;font-variant-numeric:tabular-nums}
+.week details{font-size:13.5px}
+.week summary{cursor:pointer;color:var(--muted);font-weight:500}
+.week ul{margin:8px 0 0;padding-left:18px;display:grid;gap:3px}
+
 .dayhead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:22px 0 6px}
 .dayhead h2{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0;text-wrap:balance}
 .hours{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);margin:0 0 14px}
 .actions{display:flex;gap:8px;flex-wrap:wrap}
-.overdue{background:var(--warn-soft);border:1px solid var(--warn);border-radius:10px;padding:10px 12px;margin:0 0 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px}
+.banner{border-radius:10px;padding:10px 12px;margin:0 0 12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px}
+.banner.over{background:var(--warn-soft);border:1px solid var(--warn)}
+.banner.waiting{background:var(--wait-soft);border:1px solid var(--wait);display:grid;gap:6px}
+.banner.waiting ul{margin:0;padding-left:18px;display:grid;gap:2px}
+.banner.waiting .d{font-family:var(--f-mono);font-size:12.5px;color:var(--wait)}
+.focus{background:var(--surface);border:1px solid var(--star);border-radius:10px;padding:10px 12px;margin:0 0 12px}
+.focus h3{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--star);font-weight:700}
+.focus ol{margin:0;padding-left:20px;display:grid;gap:3px;font-weight:600}
+.focus li.done{text-decoration:line-through;color:var(--muted);font-weight:500}
+.focus p{margin:0;font-size:13.5px;color:var(--muted)}
 .list{display:grid;gap:8px}
 .task{display:grid;grid-template-columns:62px 28px minmax(0,1fr) auto;gap:10px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 10px 10px 0;position:relative}
 .task::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--pc,var(--p-other))}
+.task.star{border-color:var(--star)}
+.task.conflict{border-color:var(--warn)}
 .time{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);text-align:right;padding-top:3px;font-variant-numeric:tabular-nums;line-height:1.3}
 .time b{display:block;color:var(--ink);font-weight:600;font-size:13.5px}
 .check{width:24px;height:24px;border:2px solid var(--muted);border-radius:6px;background:transparent;display:grid;place-items:center;padding:0;margin-top:1px}
@@ -73,45 +107,56 @@ button{font:inherit;color:inherit;cursor:pointer}
 .task.done .check svg{opacity:1}
 .body{min-width:0}
 .title{font-weight:600;overflow-wrap:anywhere}
+.title .s{color:var(--star);margin-right:4px}
 .task.done .title{text-decoration:line-through;color:var(--muted)}
 .note{color:var(--muted);font-size:13.5px;margin-top:2px;overflow-wrap:anywhere;white-space:pre-wrap}
-.chip{display:inline-block;font-size:11.5px;font-weight:600;letter-spacing:.03em;color:var(--pc);border:1px solid var(--pc);border-radius:999px;padding:0 8px;margin-top:5px}
-.tools{display:flex;gap:2px}
-.tools button{border:0;background:transparent;color:var(--muted);border-radius:6px;padding:4px 7px;font-size:13px}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.chip{display:inline-block;font-size:11.5px;font-weight:600;letter-spacing:.03em;color:var(--pc);border:1px solid var(--pc);border-radius:999px;padding:0 8px}
+.flag{display:inline-block;font-size:11.5px;font-weight:600;border-radius:999px;padding:0 8px}
+.flag.w{background:var(--wait-soft);color:var(--wait)}
+.flag.x{background:var(--warn-soft);color:var(--warn)}
+.flag.m{background:var(--accent-soft);color:var(--accent)}
+.tools{display:flex;gap:2px;flex-wrap:wrap;justify-content:flex-end}
+.tools button{border:0;background:transparent;color:var(--muted);border-radius:6px;padding:4px 7px;font-size:13px;white-space:nowrap}
 .tools button:hover{background:var(--accent-soft);color:var(--ink)}
+.tools button.on{color:var(--star)}
 .empty{border:1px dashed var(--line);border-radius:10px;padding:22px;text-align:center;color:var(--muted)}
 .status{font-size:13px;color:var(--muted);margin-top:18px}
-.legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:22px;font-size:12.5px;color:var(--muted)}
-.legend span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--pc);margin-right:5px;vertical-align:1px}
-/* drawer */
+/* sheets */
 .scrim{position:fixed;inset:0;background:rgba(10,14,25,.45);z-index:20}
 .drawer{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--surface);border-top:1px solid var(--line);border-radius:16px 16px 0 0;max-height:92vh;overflow:auto;padding-bottom:env(safe-area-inset-bottom,0px)}
 .drawer form{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 20px;display:grid;gap:12px}
 .drawer h3{font-family:var(--f-display);font-weight:500;font-size:17px;margin:0}
+.drawer .sub{margin:-6px 0 0;color:var(--muted);font-size:13.5px;overflow-wrap:anywhere}
 label{display:grid;gap:4px;font-size:13px;color:var(--muted);font-weight:500}
+label.inline{display:flex;align-items:center;gap:8px;color:var(--ink);font-size:14px}
+label.inline input{width:auto}
 input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
 textarea{min-height:64px;resize:vertical}
 .row{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:5px 11px;font-size:13.5px}
+.pill.sel{background:var(--accent-soft);border-color:var(--accent)}
 .formbtns{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .danger{color:var(--warn)!important;border-color:var(--warn)!important}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:14px;z-index:30;max-width:calc(100% - 32px)}
 .backup{margin-top:28px;border-top:1px solid var(--line);padding-top:18px;display:grid;gap:10px}
 .backup h3{font-family:var(--f-display);font-weight:500;font-size:16px;margin:0}
 .backup p{margin:0;font-size:13.5px;color:var(--muted)}
 .backup p.warn{color:var(--warn)}
 .bkconfirm{background:var(--surface);border:1px solid var(--accent);border-radius:10px;padding:12px;display:grid;gap:10px;font-size:14px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:14px;z-index:30}
 @media (max-width:560px){
   .days{gap:4px}.tab .dn{font-size:10.5px;letter-spacing:.02em}.tab .dd{font-size:13px}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   .task{grid-template-columns:50px 26px minmax(0,1fr);}
-  .tools{grid-column:3;justify-content:flex-start;margin-left:-7px}
+  .tools{grid-column:2/-1;justify-content:flex-start}
   .row{grid-template-columns:1fr 1fr}.row label:first-child{grid-column:1/-1}
 }
 @media (prefers-reduced-motion:no-preference){.task{transition:border-color .15s}.drawer{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
 </style>
 </head>
 <body>
-
-
 <header class="top"><div class="wrap">
   <div class="brand">
     <h1>Ежедневник</h1>
@@ -126,6 +171,18 @@ textarea{min-height:64px;resize:vertical}
 </div></header>
 
 <main class="wrap">
+  <section class="week" aria-label="Время недели">
+    <div class="kpis">
+      <div class="kpi"><small>Доступно</small><b id="kAvail"></b></div>
+      <div class="kpi"><small>Запланировано</small><b id="kPlan"></b></div>
+      <div class="kpi"><small>Свободно</small><b id="kFree"></b></div>
+      <div class="kpi"><small>Выполнено</small><b id="kDone"></b></div>
+    </div>
+    <div class="stack" id="stack" role="img" aria-label="Распределение времени по направлениям"></div>
+    <div class="plegend" id="plegend"></div>
+    <details id="movesBox"><summary id="movesSum"></summary><ul id="movesList"></ul></details>
+  </section>
+
   <div class="dayhead">
     <h2 id="dayTitle"></h2>
     <div class="actions">
@@ -135,9 +192,10 @@ textarea{min-height:64px;resize:vertical}
     </div>
   </div>
   <p class="hours" id="hours"></p>
-  <div id="overdue"></div>
+  <div id="banners"></div>
+  <div id="focus"></div>
   <div class="list" id="list"></div>
-  <div class="legend" id="legend"></div>
+
   <section class="backup" aria-labelledby="bkTitle">
     <h3 id="bkTitle">Резервная копия</h3>
     <p id="bkInfo"></p>
@@ -158,24 +216,52 @@ textarea{min-height:64px;resize:vertical}
   <p class="status" id="status">Загружаю задачи…</p>
 </main>
 
+<!-- task editor -->
 <div id="drawerHost" hidden>
-  <div class="scrim" id="scrim"></div>
+  <div class="scrim" data-close></div>
   <div class="drawer" role="dialog" aria-modal="true" aria-labelledby="fTitle">
     <form id="form">
       <h3 id="fTitle">Новая задача</h3>
       <label>Задача<input id="fName" required maxlength="200" placeholder="Например: звонок ЖБН по КП"></label>
       <div class="row">
-        <label>День<input id="fDate" type="date" required></label>
+        <label><span id="fDateLbl">День</span><input id="fDate" type="date" required></label>
         <label>Начало<input id="fStart" type="time" required></label>
         <label>Конец<input id="fEnd" type="time"></label>
       </div>
-      <label>Направление<select id="fProj"></select></label>
+      <div class="row2">
+        <label>Направление<select id="fProj"></select></label>
+        <label>Статус<select id="fStatus"><option value="work">В работе</option><option value="wait">Жду ответа</option></select></label>
+      </div>
+      <label class="inline"><input type="checkbox" id="fStar"> Главное на день</label>
       <label>Заметка<textarea id="fNote" maxlength="1000" placeholder="Контакты, что подготовить, итог звонка"></textarea></label>
       <div class="formbtns">
         <button type="button" class="btn danger" id="fDelete" hidden>Удалить</button>
         <span style="flex:1"></span>
-        <button type="button" class="btn" id="fCancel">Отмена</button>
+        <button type="button" class="btn" data-close>Отмена</button>
         <button type="submit" class="btn primary">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- move / wait sheet -->
+<div id="actHost" hidden>
+  <div class="scrim" data-close></div>
+  <div class="drawer" role="dialog" aria-modal="true" aria-labelledby="aTitle">
+    <form id="aForm">
+      <h3 id="aTitle"></h3>
+      <p class="sub" id="aSub"></p>
+      <label><span id="aDateLbl"></span><input id="aDate" type="date" required></label>
+      <div id="aReasonBox" style="display:grid;gap:8px">
+        <span style="font-size:13px;color:var(--muted);font-weight:500">Причина переноса</span>
+        <div class="pills" id="aPills"></div>
+        <input id="aReason" maxlength="160" placeholder="Своя причина (необязательно)">
+      </div>
+      <label id="aNoteBox">Что ждём<input id="aNote" maxlength="200" placeholder="Например: решение по формату подключения"></label>
+      <div class="formbtns">
+        <span style="flex:1"></span>
+        <button type="button" class="btn" data-close>Отмена</button>
+        <button type="submit" class="btn primary" id="aOk"></button>
       </div>
     </form>
   </div>
@@ -187,6 +273,7 @@ const PROJECTS={
   leads:"Обзвон лидов", course:"Курс Ваня", kp:"КП Архивижн", zalkar:"Залкар", jbn:"ЖБН",
   artsky:"Арт Скай", add:"АДД", meder:"Медер / БГА", ads:"Реклама", other:"Прочее"
 };
+const REASONS=["Не успела","Ждём клиента","Встреча сдвинулась","Срочное вклинилось","Поменялся приоритет"];
 const DN=["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
 const DFULL=["Понедельник","Вторник","Среда","Четверг","Пятница","Суббота","Воскресенье"];
 const MON=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
@@ -197,44 +284,98 @@ const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const parse=s=>{const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
 const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
 const mondayOf=d=>{const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());const w=(x.getDay()+6)%7;return addDays(x,-w)};
+const wd=s=>(parse(s).getDay()+6)%7;
 const TODAY=ymd(new Date());
+const mins=t=>{if(!/^\d{2}:\d{2}$/.test(t||""))return null;const[h,m]=t.split(":").map(Number);return h*60+m};
+const dur=t=>{const a=mins(t.start),b=mins(t.end);return a!=null&&b!=null&&b>a?b-a:0};
+const hrs=m=>{const h=m/60;return (Math.round(h*10)/10).toString().replace(".",",")+" ч"};
+function fmtShort(d){const x=parse(d);return `${DN[(x.getDay()+6)%7]} ${x.getDate()}.${pad(x.getMonth()+1)}`}
+function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 
-let tasks=[];           // {id,date,start,end,title,project,note,done}
+/* work windows in minutes; lunch 30 min is not counted as available */
+const LUNCH=30;
+function windows(d){const w=wd(d);if(w===2)return[[570,900],[1030,1110]];if(w>4)return[];return[[570,1005]]}
+function available(d){const ws=windows(d);if(!ws.length)return 0;return ws.reduce((s,[a,b])=>s+b-a,0)-LUNCH}
+function hoursFor(d){
+  const w=wd(d);
+  if(w===2) return "Рабочее время 9:30–15:00 · 15:00–17:00 занято · 17:10–18:30 в офисе, удобно для обзвона";
+  if(w>4) return "Выходной";
+  return "Рабочее время 9:30–16:45";
+}
+
+let tasks=[];   // {id,date,start,end,title,project,note,done,important,waiting,waitSince,waitFor,moves:[{from,to,reason}]}
 let week=mondayOf(new Date());
 let day=TODAY;
 let editing=null;
-let store=null;         // {save(t), remove(id)}
+let store=null;
 let mode="local";
 
 /* ---------- storage ---------- */
 function localLoad(){try{return JSON.parse(localStorage.getItem("planner-tasks")||"[]")}catch(e){return[]}}
 function localSave(){try{localStorage.setItem("planner-tasks",JSON.stringify(tasks))}catch(e){}}
-const SEED=[{"id": "s0", "date": "2026-10-26", "start": "12:40", "end": "13:00", "title": "Планирование недели, список лидов на обзвон", "project": "leads", "note": "", "done": false}, {"id": "s1", "date": "2026-10-26", "start": "13:30", "end": "14:30", "title": "ЖБН: звонок по результатам КП, гибкое предложение", "project": "jbn", "note": "", "done": false}, {"id": "s2", "date": "2026-10-26", "start": "14:30", "end": "15:30", "title": "Обзвон лидов: первое касание", "project": "leads", "note": "Заодно: подтвердить дату и время с Залкар, назначить встречу с Медером", "done": false}, {"id": "s3", "date": "2026-10-26", "start": "15:30", "end": "16:30", "title": "КП Архивижн: начать доработку", "project": "kp", "note": "", "done": false}, {"id": "s4", "date": "2026-10-27", "start": "09:45", "end": "12:00", "title": "Обзвон лидов: первые касания и интервью", "project": "leads", "note": "", "done": false}, {"id": "s5", "date": "2026-10-27", "start": "12:00", "end": "13:00", "title": "Презентация Залкар: структура и ключевые тезисы", "project": "zalkar", "note": "Что показываем в шахматке", "done": false}, {"id": "s6", "date": "2026-10-27", "start": "13:30", "end": "15:00", "title": "Курс Ваня: модуль, часть 1", "project": "course", "note": "", "done": false}, {"id": "s7", "date": "2026-10-27", "start": "15:00", "end": "16:00", "title": "Арт Скай: анализ дебиторки, стратегия", "project": "artsky", "note": "", "done": false}, {"id": "s8", "date": "2026-10-27", "start": "16:00", "end": "16:30", "title": "КП Архивижн: доработка", "project": "kp", "note": "", "done": false}, {"id": "s9", "date": "2026-10-28", "start": "09:45", "end": "11:30", "title": "Презентация Залкар: слайды и демо", "project": "zalkar", "note": "", "done": false}, {"id": "s10", "date": "2026-10-28", "start": "11:30", "end": "13:00", "title": "АДД: работа с Аяной и командой", "project": "add", "note": "", "done": false}, {"id": "s11", "date": "2026-10-28", "start": "13:30", "end": "15:00", "title": "Реклама: оффер, тексты, креативы, бюджет", "project": "ads", "note": "Лалафо + Instagram, аутсорс сопровождения заявки в БГА, ЦА — физлица", "done": false}, {"id": "s12", "date": "2026-10-28", "start": "17:10", "end": "18:30", "title": "Обзвон: интервью и дожим", "project": "leads", "note": "ЖБН, если не ответила в пн; Арт Скай — первый контакт по дебиторке", "done": false}, {"id": "s13", "date": "2026-10-29", "start": "09:45", "end": "11:30", "title": "Обзвон лидов", "project": "leads", "note": "", "done": false}, {"id": "s14", "date": "2026-10-29", "start": "11:30", "end": "13:00", "title": "Презентация Залкар: финализация и прогон", "project": "zalkar", "note": "", "done": false}, {"id": "s15", "date": "2026-10-29", "start": "13:30", "end": "15:00", "title": "Курс Ваня: модуль, часть 2 (закрыть модуль)", "project": "course", "note": "", "done": false}, {"id": "s16", "date": "2026-10-29", "start": "15:00", "end": "16:30", "title": "Встреча с Медером в БГА", "project": "meder", "note": "С учётом дороги", "done": false}, {"id": "s17", "date": "2026-10-30", "start": "09:30", "end": "10:30", "title": "Финальный прогон презентации Залкар", "project": "zalkar", "note": "", "done": false}, {"id": "s18", "date": "2026-10-30", "start": "10:30", "end": "12:00", "title": "Обзвон лидов / дожим ЖБН", "project": "leads", "note": "", "done": false}, {"id": "s19", "date": "2026-10-30", "start": "13:30", "end": "15:00", "title": "Встреча Залкар (ориентировочно)", "project": "zalkar", "note": "Уточнить точное время", "done": false}, {"id": "s20", "date": "2026-10-30", "start": "15:00", "end": "16:00", "title": "Запуск рекламы в Лалафо и Instagram", "project": "ads", "note": "", "done": false}, {"id": "s21", "date": "2026-10-30", "start": "16:00", "end": "16:45", "title": "Итоги недели и план на следующую", "project": "other", "note": "Статус по лидам, ЖБН, Арт Скай", "done": false}];
+function localStore(){
+  return{save:async t=>{const i=tasks.findIndex(x=>x.id===t.id);i<0?tasks.push(t):tasks[i]=t;localSave();render()},
+    remove:async id=>{tasks=tasks.filter(x=>x.id!==id);localSave();render()},
+    bulk:async(list,replace)=>{if(replace)tasks=list.map(t=>({...t}));else{for(const t of list){const i=tasks.findIndex(x=>x.id===t.id);i<0?tasks.push(t):tasks[i]=t}}localSave();render()}};
+}
+function setStatus(s){$("status").textContent=s;$("status").hidden=!s}
+const SEED=[{"id": "s0", "date": "2026-10-26", "start": "12:40", "end": "13:00", "title": "Планирование недели, список лидов на обзвон", "project": "leads", "note": "", "done": false, "important": false, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s1", "date": "2026-10-26", "start": "13:30", "end": "14:30", "title": "ЖБН: звонок по результатам КП, гибкое предложение", "project": "jbn", "note": "", "done": false, "important": true, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s2", "date": "2026-10-26", "start": "14:30", "end": "15:30", "title": "Обзвон лидов: первое касание", "project": "leads", "note": "Заодно: подтвердить дату и время с Залкар, назначить встречу с Медером", "done": false, "important": false, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s3", "date": "2026-10-26", "start": "15:30", "end": "16:30", "title": "КП Архивижн: начать доработку", "project": "kp", "note": "", "done": false, "important": false, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s4", "date": "2026-10-27", "start": "09:45", "end": "12:00", "title": "Обзвон лидов: первые касания и интервью", "project": "leads", "note": "", "done": false, "important": false, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s5", "date": "2026-10-27", "start": "12:00", "end": "13:00", "title": "Презентация Залкар: структура и ключевые тезисы", "project": "zalkar", "note": "Что показываем в шахматке", "done": false, "important": false, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s6", "date": "2026-10-27", "start": "13:30", "end": "15:00", "title": "Курс Ваня: модуль, часть 1", "project": "course", "note": "", "done": false, "important": false, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s7", "date": "2026-10-27", "start": "15:00", "end": "16:00", "title": "Арт Скай: анализ дебиторки, стратегия", "project": "artsky", "note": "", "done": false, "important": false, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s8", "date": "2026-10-27", "start": "16:00", "end": "16:30", "title": "КП Архивижн: доработка", "project": "kp", "note": "", "done": false, "important": false, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s9", "date": "2026-10-28", "start": "09:45", "end": "11:30", "title": "Презентация Залкар: слайды и демо", "project": "zalkar", "note": "", "done": false, "important": true, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s10", "date": "2026-10-28", "start": "11:30", "end": "13:00", "title": "АДД: работа с Аяной и командой", "project": "add", "note": "", "done": false, "important": false, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s11", "date": "2026-10-28", "start": "13:30", "end": "15:00", "title": "Реклама: оффер, тексты, креативы, бюджет", "project": "ads", "note": "Лалафо + Instagram, аутсорс сопровождения заявки в БГА, ЦА — физлица", "done": false, "important": false, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s12", "date": "2026-10-28", "start": "17:10", "end": "18:30", "title": "Обзвон: интервью и дожим", "project": "leads", "note": "ЖБН, если не ответила в пн; Арт Скай — первый контакт по дебиторке", "done": false, "important": false, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s13", "date": "2026-10-29", "start": "09:45", "end": "11:30", "title": "Обзвон лидов", "project": "leads", "note": "", "done": false, "important": false, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s14", "date": "2026-10-29", "start": "11:30", "end": "13:00", "title": "Презентация Залкар: финализация и прогон", "project": "zalkar", "note": "", "done": false, "important": false, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s15", "date": "2026-10-29", "start": "13:30", "end": "15:00", "title": "Курс Ваня: модуль, часть 2 (закрыть модуль)", "project": "course", "note": "", "done": false, "important": true, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s16", "date": "2026-10-29", "start": "15:00", "end": "16:30", "title": "Встреча с Медером в БГА", "project": "meder", "note": "С учётом дороги", "done": false, "important": false, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s17", "date": "2026-10-30", "start": "09:30", "end": "10:30", "title": "Финальный прогон презентации Залкар", "project": "zalkar", "note": "", "done": false, "important": false, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s18", "date": "2026-10-30", "start": "10:30", "end": "12:00", "title": "Обзвон лидов / дожим ЖБН", "project": "leads", "note": "", "done": false, "important": false, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s19", "date": "2026-10-30", "start": "13:30", "end": "15:00", "title": "Встреча Залкар (ориентировочно)", "project": "zalkar", "note": "Уточнить точное время", "done": false, "important": true, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s20", "date": "2026-10-30", "start": "15:00", "end": "16:00", "title": "Запуск рекламы в Лалафо и Instagram", "project": "ads", "note": "", "done": false, "important": false, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}, {"id": "s21", "date": "2026-10-30", "start": "16:00", "end": "16:45", "title": "Итоги недели и план на следующую", "project": "other", "note": "Статус по лидам, ЖБН, Арт Скай", "done": false, "important": false, "waiting": false, "waitSince": "", "waitFor": "", "moves": []}];
 async function initStore(){
   mode="local";
   let seeded=false;try{seeded=localStorage.getItem("planner-seeded")==="1"}catch(e){}
   tasks=localLoad();
   if(!seeded&&!tasks.length){tasks=SEED.map(t=>({...t}));localSave();try{localStorage.setItem("planner-seeded","1")}catch(e){}}
-  store={save:async t=>{const i=tasks.findIndex(x=>x.id===t.id);i<0?tasks.push(t):tasks[i]=t;localSave();render()},
-         remove:async id=>{tasks=tasks.filter(x=>x.id!==id);localSave();render()},
-           bulk:async(list,replace)=>{if(replace)tasks=list.map(t=>({...t}));else{for(const t of list){const i=tasks.findIndex(x=>x.id===t.id);i<0?tasks.push(t):tasks[i]=t}}localSave();render()}};
-  setStatus("Задачи хранятся в этом браузере. На другом устройстве список будет свой.");
+  store=localStore();
+  setStatus("Задачи хранятся в этом браузере. На другом устройстве список свой: переносите через бэкап.");
   render();
 }
-function setStatus(s){$("status").textContent=s;$("status").hidden=!s}
-const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 
-/* ---------- render ---------- */
+/* ---------- analysis ---------- */
 const byTime=(a,b)=>(a.start||"").localeCompare(b.start||"")||(a.title||"").localeCompare(b.title||"");
 const tasksOn=d=>tasks.filter(t=>t.date===d).sort(byTime);
-function hoursFor(d){
-  const w=(parse(d).getDay()+6)%7;
-  if(w===2) return "Рабочее время 9:30–15:00 · 15:00–17:00 занято · 17:10–18:30 в офисе, удобно для обзвона";
-  if(w>4) return "Выходной";
-  return "Рабочее время 9:30–16:45";
+function conflicts(d){
+  const list=tasksOn(d).filter(t=>!t.done);const out={};
+  const add=(id,msg)=>{(out[id]=out[id]||[]).push(msg)};
+  const ws=windows(d);
+  for(const t of list){
+    const a=mins(t.start),b=mins(t.end)??a;
+    if(a==null||!ws.length)continue;
+    if(!ws.some(([s,e])=>a>=s&&b<=e))add(t.id,"вне рабочего времени");
+  }
+  for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length;j++){
+    const x=list[i],y=list[j];const xa=mins(x.start),xb=mins(x.end),ya=mins(y.start),yb=mins(y.end);
+    if(xa==null||ya==null||xb==null||yb==null)continue;
+    if(xa<yb&&ya<xb){add(x.id,`пересекается с ${y.start}`);add(y.id,`пересекается с ${x.start}`)}
+  }
+  return out;
 }
+
+/* ---------- render ---------- */
 const checkSvg='<svg viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5"/></svg>';
-function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+
+function renderWeek(){
+  const ds=[0,1,2,3,4,5,6].map(i=>ymd(addDays(week,i)));
+  const wt=tasks.filter(t=>ds.includes(t.date));
+  const avail=ds.reduce((s,d)=>s+available(d),0);
+  const per={};let plan=0;
+  for(const t of wt){const m=dur(t);plan+=m;per[t.project]=(per[t.project]||0)+m}
+  $("kAvail").textContent=hrs(avail);$("kPlan").textContent=hrs(plan);
+  const free=avail-plan;$("kFree").textContent=(free<0?"−":"")+hrs(Math.abs(free));$("kFree").className=free<0?"neg":"";
+  $("kDone").textContent=`${wt.filter(t=>t.done).length} из ${wt.length}`;
+  const keys=Object.keys(PROJECTS).filter(k=>per[k]);
+  const base=Math.max(avail,plan)||1;
+  $("stack").innerHTML=keys.map(k=>`<i style="--pc:var(--p-${k});width:${per[k]/base*100}%" title="${PROJECTS[k]}: ${hrs(per[k])}"></i>`).join("");
+  $("plegend").innerHTML=keys.length?keys.sort((a,b)=>per[b]-per[a]).map(k=>`<span style="--pc:var(--p-${k})">${PROJECTS[k]}<b>${hrs(per[k])}</b></span>`).join(""):"<span style='--pc:var(--line)'>На этой неделе пока нет задач со временем</span>";
+  // moves made into or within this week
+  const mv=[];for(const t of tasks)for(const m of (t.moves||[]))if(ds.includes(m.from))mv.push({t,m});
+  $("movesBox").hidden=!mv.length;
+  if(mv.length){
+    const cnt={};mv.forEach(({m})=>{const r=m.reason||"Без причины";cnt[r]=(cnt[r]||0)+1});
+    $("movesSum").textContent=`Переносы за неделю: ${mv.length} · `+Object.entries(cnt).sort((a,b)=>b[1]-a[1]).map(([r,n])=>`${r} (${n})`).join(", ");
+    $("movesList").innerHTML=mv.sort((a,b)=>a.m.from.localeCompare(b.m.from)).map(({t,m})=>`<li>${esc(t.title)}: ${fmtShort(m.from)} → ${fmtShort(m.to)}${m.reason?` · ${esc(m.reason)}`:""}</li>`).join("");
+  }
+}
 
 function render(){
   const end=addDays(week,6);
@@ -243,98 +384,160 @@ function render(){
   for(let i=0;i<7;i++){
     const d=ymd(addDays(week,i));const list=tasksOn(d);
     const pct=list.length?Math.round(100*list.filter(t=>t.done).length/list.length):0;
+    const hasC=Object.keys(conflicts(d)).length>0;
     const b=document.createElement("button");
     b.className="tab"+(d===day?" active":"")+(d===TODAY?" today":"")+(i>4?" weekend":"");
     b.setAttribute("aria-pressed",d===day);
-    b.innerHTML=`<span class="dn">${DN[i]}</span><span class="dd">${addDays(week,i).getDate()}</span><span class="bar"><i style="width:${pct}%"></i></span>`;
+    b.innerHTML=`<span class="dn">${DN[i]}</span><span class="dd">${addDays(week,i).getDate()}</span><span class="bar"><i style="width:${pct}%"></i></span>${hasC?'<span class="warnDot" title="Есть пересечения"></span>':""}`;
     b.onclick=()=>{day=d;render()};
     nav.appendChild(b);
   }
-  const dt=parse(day);const w=(dt.getDay()+6)%7;
-  $("dayTitle").textContent=`${DFULL[w]}, ${dt.getDate()} ${MON[dt.getMonth()]}`+(day===TODAY?" · сегодня":"");
-  $("hours").textContent=hoursFor(day);
+  renderWeek();
 
-  // overdue: unfinished tasks from earlier days, shown only on today
-  const od=$("overdue");od.innerHTML="";
+  const dt=parse(day);const w=wd(day);
+  $("dayTitle").textContent=`${DFULL[w]}, ${dt.getDate()} ${MON[dt.getMonth()]}`+(day===TODAY?" · сегодня":"");
+  const items=tasksOn(day);
+  const planned=items.reduce((s,t)=>s+dur(t),0);const av=available(day);
+  $("hours").textContent=hoursFor(day)+(av?` · запланировано ${hrs(planned)} из ${hrs(av)}`:"");
+
+  // banners: overdue and waiting (only on today)
+  const bn=$("banners");bn.innerHTML="";
   if(day===TODAY){
     const late=tasks.filter(t=>t.date<TODAY&&!t.done);
     if(late.length){
-      const box=document.createElement("div");box.className="overdue";
+      const box=document.createElement("div");box.className="banner over";
       box.innerHTML=`<span>Не закрыто с прошлых дней: <b>${late.length}</b></span>`;
       const mv=document.createElement("button");mv.className="btn";mv.textContent="Перенести на сегодня";
-      mv.onclick=async()=>{for(const t of late){await store.save({...t,date:TODAY,note:(t.note?t.note+"\n":"")+`Перенесено с ${t.date.slice(8)}.${t.date.slice(5,7)}`})}toast(`Перенесено: ${late.length}`)};
-      box.appendChild(mv);od.appendChild(box);
+      mv.onclick=async()=>{for(const t of late){await store.save(moved(t,TODAY,"Не закрыто вовремя"))}toast(`Перенесено: ${late.length}`)};
+      box.appendChild(mv);bn.appendChild(box);
+    }
+    const waiting=tasks.filter(t=>t.waiting&&!t.done&&t.date>TODAY).sort((a,b)=>a.date.localeCompare(b.date));
+    if(waiting.length){
+      const box=document.createElement("div");box.className="banner waiting";
+      box.innerHTML=`<span>Ждём ответа: <b>${waiting.length}</b></span><ul>${waiting.map(t=>`<li>${esc(t.title)} <span class="d">· связаться ${fmtShort(t.date)}</span></li>`).join("")}</ul>`;
+      bn.appendChild(box);
     }
   }
 
+  // focus: top results of the day
+  const stars=items.filter(t=>t.important);
+  $("focus").innerHTML=`<div class="focus"><h3>Главное на день</h3>${stars.length?`<ol>${stars.map(t=>`<li class="${t.done?"done":""}">${esc(t.title)}</li>`).join("")}</ol>`:`<p>Отметьте ☆ до трёх задач, которые важнее всего сделать сегодня.</p>`}</div>`;
+
+  const conf=conflicts(day);
   const list=$("list");list.innerHTML="";
-  const items=tasksOn(day);
-  if(!items.length){
-    list.innerHTML=`<div class="empty">На этот день задач нет.<br>Добавьте задачу или перенесите сюда незакрытую.</div>`;
-  }
+  if(!items.length)list.innerHTML=`<div class="empty">На этот день задач нет.<br>Добавьте задачу или перенесите сюда незакрытую.</div>`;
   for(const t of items){
     const el=document.createElement("div");
-    el.className="task"+(t.done?" done":"");
+    el.className="task"+(t.done?" done":"")+(t.important?" star":"")+(conf[t.id]?" conflict":"");
     el.style.setProperty("--pc",`var(--p-${PROJECTS[t.project]?t.project:"other"})`);
+    const flags=[];
+    if(t.waiting&&!t.done)flags.push(`<span class="flag w">Ждём ответа${t.waitSince?` с ${fmtShort(t.waitSince)}`:""}${t.waitFor?`: ${esc(t.waitFor)}`:""} · напомнить</span>`);
+    if(conf[t.id])flags.push(`<span class="flag x">${esc([...new Set(conf[t.id])].join(", "))}</span>`);
+    if(t.moves?.length)flags.push(`<span class="flag m" title="${esc(t.moves.map(m=>`${fmtShort(m.from)} → ${fmtShort(m.to)}${m.reason?": "+m.reason:""}`).join("; "))}">перенос ×${t.moves.length}</span>`);
     el.innerHTML=`<div class="time"><b>${esc(t.start||"")}</b>${esc(t.end||"")}</div>
       <button class="check" aria-label="${t.done?"Снять отметку":"Отметить выполненной"}">${checkSvg}</button>
-      <div class="body"><div class="title">${esc(t.title)}</div>${t.note?`<div class="note">${esc(t.note)}</div>`:""}<span class="chip">${esc(PROJECTS[t.project]||"Прочее")}</span></div>
-      <div class="tools"><button data-a="tmr" title="Перенести на следующий рабочий день">→ завтра</button><button data-a="edit">Изменить</button></div>`;
-    el.querySelector(".check").onclick=()=>store.save({...t,done:!t.done});
+      <div class="body"><div class="title">${t.important?'<span class="s" aria-label="Главное">★</span>':""}${esc(t.title)}</div>${t.note?`<div class="note">${esc(t.note)}</div>`:""}<div class="tags"><span class="chip">${esc(PROJECTS[t.project]||"Прочее")}</span>${flags.join("")}</div></div>
+      <div class="tools"><button data-a="star" class="${t.important?"on":""}" aria-pressed="${!!t.important}" title="Главное на день">${t.important?"★":"☆"}</button><button data-a="wait">Жду ответа</button><button data-a="move">Перенести</button><button data-a="edit">Изменить</button></div>`;
+    el.querySelector(".check").onclick=()=>store.save({...t,done:!t.done,waiting:t.done?t.waiting:false});
     el.querySelector('[data-a="edit"]').onclick=()=>openForm(t);
-    el.querySelector('[data-a="tmr"]').onclick=async()=>{const n=nextWorkday(t.date);await store.save({...t,date:n});toast(`Перенесено на ${fmtShort(n)}`)};
+    el.querySelector('[data-a="move"]').onclick=()=>openAct("move",t);
+    el.querySelector('[data-a="wait"]').onclick=()=>openAct("wait",t);
+    el.querySelector('[data-a="star"]').onclick=()=>{
+      if(!t.important&&tasksOn(t.date).filter(x=>x.important).length>=3){toast("Главного не больше трёх. Снимите звёздочку с другой задачи.");return}
+      store.save({...t,important:!t.important});
+    };
     list.appendChild(el);
   }
-  $("legend").innerHTML=Object.entries(PROJECTS).map(([k,v])=>`<span style="--pc:var(--p-${k})">${v}</span>`).join("");
+  if(typeof renderBackupInfo==="function")renderBackupInfo();
 }
 function nextWorkday(d){let x=addDays(parse(d),1);while(x.getDay()===0||x.getDay()===6)x=addDays(x,1);return ymd(x)}
-function fmtShort(d){const x=parse(d);return `${DN[(x.getDay()+6)%7]} ${x.getDate()}.${pad(x.getMonth()+1)}`}
-function toast(s){const t=$("toast");t.textContent=s;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,2200)}
+function moved(t,to,reason){
+  if(to===t.date)return t;
+  return{...t,date:to,moves:[...(t.moves||[]),{from:t.date,to,reason:reason||""}]};
+}
+function toast(s){const t=$("toast");t.textContent=s;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,2600)}
 
-/* ---------- form ---------- */
+/* ---------- task editor ---------- */
 $("fProj").innerHTML=Object.entries(PROJECTS).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
+$("fStatus").onchange=()=>{$("fDateLbl").textContent=$("fStatus").value==="wait"?"Связаться снова":"День"};
 function openForm(t){
   editing=t||null;
   $("fTitle").textContent=t?"Изменить задачу":"Новая задача";
   $("fName").value=t?.title||"";$("fDate").value=t?.date||day;
   $("fStart").value=t?.start||"09:30";$("fEnd").value=t?.end||"";
   $("fProj").value=t?.project||"leads";$("fNote").value=t?.note||"";
+  $("fStatus").value=t?.waiting?"wait":"work";$("fStatus").onchange();
+  $("fStar").checked=!!t?.important;
   $("fDelete").hidden=!t;$("fDelete").textContent="Удалить";$("fDelete").dataset.armed="";
   $("drawerHost").hidden=false;setTimeout(()=>$("fName").focus(),30);
 }
-function closeForm(){$("drawerHost").hidden=true;editing=null}
+function closeAll(){$("drawerHost").hidden=true;$("actHost").hidden=true;editing=null}
+document.querySelectorAll("[data-close]").forEach(b=>b.onclick=closeAll);
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeAll()});
 $("form").addEventListener("submit",async e=>{
   e.preventDefault();
-  const t={...(editing||{id:uid(),done:false}),title:$("fName").value.trim(),date:$("fDate").value,
-    start:$("fStart").value,end:$("fEnd").value,project:$("fProj").value,note:$("fNote").value.trim()};
-  if(!t.title||!t.date)return;
-  closeForm();
+  const wait=$("fStatus").value==="wait";
+  const base=editing||{id:uid(),done:false,moves:[]};
+  let t={...base,title:$("fName").value.trim(),start:$("fStart").value,end:$("fEnd").value,
+    project:$("fProj").value,note:$("fNote").value.trim(),important:$("fStar").checked,
+    waiting:wait,waitSince:wait?(base.waiting?base.waitSince:TODAY):"",waitFor:wait?(base.waitFor||""):""};
+  if(!t.title||!$("fDate").value)return;
+  if(t.important&&!base.important&&tasks.filter(x=>x.date===$("fDate").value&&x.important&&x.id!==t.id).length>=3){toast("На этот день уже три главных задачи");return}
+  t=editing?moved(t,$("fDate").value,""):{...t,date:$("fDate").value};
+  closeAll();
   try{await store.save(t);toast("Сохранено");if(t.date!==day){day=t.date;week=mondayOf(parse(t.date));render()}}
   catch(err){toast("Не удалось сохранить. Проверьте соединение.")}
 });
 $("fDelete").onclick=async()=>{
   const b=$("fDelete");
   if(!b.dataset.armed){b.dataset.armed="1";b.textContent="Точно удалить?";return}
-  const id=editing.id;closeForm();await store.remove(id);toast("Удалено");
+  const id=editing.id;closeAll();await store.remove(id);toast("Удалено");
 };
-$("fCancel").onclick=closeForm;$("scrim").onclick=closeForm;
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("drawerHost").hidden)closeForm()});
 
-/* ---------- navigation ---------- */
-$("prevW").onclick=()=>{week=addDays(week,-7);day=ymd(week);render()};
-$("nextW").onclick=()=>{week=addDays(week,7);day=ymd(week);render()};
-$("todayBtn").onclick=()=>{week=mondayOf(new Date());day=TODAY;render()};
-$("addBtn").onclick=()=>openForm(null);
+/* ---------- move / wait sheet ---------- */
+let act=null;
+function openAct(kind,t){
+  act={kind,t};const isMove=kind==="move";
+  $("aTitle").textContent=isMove?"Перенести задачу":"Жду ответа";
+  $("aSub").textContent=t.title;
+  $("aDateLbl").textContent=isMove?"На какой день":"Когда связаться снова";
+  $("aDate").value=isMove?nextWorkday(t.date):nextWorkday(nextWorkday(TODAY>t.date?TODAY:t.date));
+  $("aReasonBox").hidden=!isMove;$("aNoteBox").hidden=isMove;
+  $("aReason").value="";$("aNote").value=t.waitFor||"";
+  $("aPills").innerHTML=REASONS.map(r=>`<button type="button" class="pill">${r}</button>`).join("");
+  $("aPills").querySelectorAll(".pill").forEach(p=>p.onclick=()=>{
+    const on=!p.classList.contains("sel");$("aPills").querySelectorAll(".pill").forEach(x=>x.classList.remove("sel"));
+    if(on){p.classList.add("sel");$("aReason").value=""}
+  });
+  $("aOk").textContent=isMove?"Перенести":"Отложить до этой даты";
+  $("actHost").hidden=false;
+}
+$("aReason").addEventListener("input",()=>$("aPills").querySelectorAll(".pill").forEach(x=>x.classList.remove("sel")));
+$("aForm").addEventListener("submit",async e=>{
+  e.preventDefault();if(!act)return;
+  const{kind,t}=act;const to=$("aDate").value;if(!to)return;
+  let n;
+  if(kind==="move"){
+    const reason=$("aReason").value.trim()||$("aPills").querySelector(".pill.sel")?.textContent||"";
+    n=moved(t,to,reason);
+  }else{
+    n={...moved(t,to,"Ждём клиента"),waiting:true,waitSince:t.waiting?t.waitSince:TODAY,waitFor:$("aNote").value.trim()};
+  }
+  closeAll();act=null;
+  try{await store.save(n);toast(kind==="move"?`Перенесено на ${fmtShort(to)}`:`Напомню ${fmtShort(to)}`)}catch(err){toast("Не удалось сохранить")}
+});
 
 /* ---------- printable checklists ---------- */
 function sheet(d){
-  const x=parse(d);const w=(x.getDay()+6)%7;const items=tasksOn(d);
-  const rows=items.map(t=>`<tr><td class="b"><span class="box">${t.done?"✓":""}</span></td><td class="t">${esc(t.start)}${t.end?"–"+esc(t.end):""}</td><td><div class="n">${esc(t.title)}</div>${t.note?`<div class="m">${esc(t.note)}</div>`:""}</td><td class="p">${esc(PROJECTS[t.project]||"")}</td></tr>`).join("");
+  const x=parse(d);const w=wd(d);const items=tasksOn(d);
+  const stars=items.filter(t=>t.important);
+  const rows=items.map(t=>`<tr><td class="b"><span class="box">${t.done?"✓":""}</span></td><td class="t">${esc(t.start)}${t.end?"–"+esc(t.end):""}</td><td><div class="n">${t.important?"★ ":""}${esc(t.title)}</div>${t.waiting?`<div class="m">Ждём ответа${t.waitFor?": "+esc(t.waitFor):""}</div>`:""}${t.note?`<div class="m">${esc(t.note)}</div>`:""}</td><td class="p">${esc(PROJECTS[t.project]||"")}</td></tr>`).join("");
   const blanks=Array.from({length:Math.max(3,10-items.length)},()=>`<tr class="blank"><td class="b"><span class="box"></span></td><td class="t"></td><td></td><td></td></tr>`).join("");
+  const focus=[0,1,2].map(i=>`<div class="line">${stars[i]?`${i+1}. ${esc(stars[i].title)}`:`${i+1}.`}</div>`).join("");
   return `<section class="page"><header><div><h1>${DFULL[w]}</h1><div class="date">${x.getDate()} ${MON[x.getMonth()]} ${x.getFullYear()}</div></div><div class="hrs">${esc(hoursFor(d))}</div></header>
-  <div class="focus"><span>Главное на сегодня</span><div class="line"></div><div class="line"></div></div>
+  <div class="focus"><span>Главное на сегодня</span>${focus}</div>
   <table><thead><tr><th></th><th>Время</th><th>Задача</th><th>Направление</th></tr></thead><tbody>${rows}${blanks}</tbody></table>
-  <div class="notes"><div><span>Итоги звонков и заметки</span>${'<div class="line"></div>'.repeat(5)}</div><div><span>Перенести на завтра</span>${'<div class="line"></div>'.repeat(5)}</div></div></section>`;
+  <div class="notes"><div><span>Итоги звонков и заметки</span>${'<div class="line"></div>'.repeat(5)}</div><div><span>Перенести на завтра и почему</span>${'<div class="line"></div>'.repeat(5)}</div></div></section>`;
 }
 function printDoc(dates,title){
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${title}</title>
@@ -345,7 +548,7 @@ function printDoc(dates,title){
 header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #111;padding-bottom:6px;margin-bottom:12px;gap:16px}
 h1{font-size:22pt;margin:0;font-weight:700}.date{font-size:11pt;color:#444}.hrs{font-size:9pt;color:#555;text-align:right;max-width:55%}
 .focus span,.notes span{font-size:9pt;text-transform:uppercase;letter-spacing:.08em;color:#555;font-weight:600}
-.line{border-bottom:1px solid #bbb;height:22px}
+.line{border-bottom:1px solid #bbb;min-height:22px;padding-top:4px;font-weight:600}
 .focus{margin-bottom:14px}
 table{width:100%;border-collapse:collapse}th{text-align:left;font-size:8.5pt;text-transform:uppercase;letter-spacing:.06em;color:#555;border-bottom:1px solid #111;padding:4px 6px}
 td{border-bottom:1px solid #ccc;padding:7px 6px;vertical-align:top}tr.blank td{height:30px}
@@ -357,20 +560,19 @@ td{border-bottom:1px solid #ccc;padding:7px 6px;vertical-align:top}tr.blank td{h
 </style></head><body>${dates.map(sheet).join("")}
 <script>window.addEventListener("load",()=>setTimeout(()=>window.print(),300))<\/script></body></html>`;
 }
-function offer(filename,html){
+async function saveFile(filename,text){
+  try{const u=URL.createObjectURL(new Blob([text],{type:"application/json"}));const a=document.createElement("a");a.href=u;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),5000);return true}
+  catch(e){toast("Не удалось сохранить файл");return false}
+}
+function printHtml(filename,html){
   html=html.replace(/<script>window\.addEventListener[\s\S]*?<\/script>/,"");
   const f=document.createElement("iframe");f.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0";
   document.body.appendChild(f);
   f.onload=()=>{setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){toast("Не удалось открыть печать")}setTimeout(()=>f.remove(),60000)},300)};
   f.srcdoc=html;
 }
-$("printDay").onclick=()=>offer(`чек-лист-${day}.html`,printDoc([day],`Чек-лист ${day}`));
-$("printWeek").onclick=()=>{const ds=[0,1,2,3,4].map(i=>ymd(addDays(week,i)));offer(`чек-лист-неделя-${ds[0]}.html`,printDoc(ds,`Чек-лист недели ${ds[0]}`))};
-
-async function saveFile(filename,text){
-  try{const u=URL.createObjectURL(new Blob([text],{type:"application/json"}));const a=document.createElement("a");a.href=u;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),5000);return true}
-  catch(e){toast("Не удалось сохранить файл");return false}
-}
+$("printDay").onclick=()=>printHtml(`чек-лист-${day}.html`,printDoc([day],`Чек-лист ${day}`));
+$("printWeek").onclick=()=>{const ds=[0,1,2,3,4].map(i=>ymd(addDays(week,i)));printHtml(`чек-лист-неделя-${ds[0]}.html`,printDoc(ds,`Чек-лист недели ${ds[0]}`))};
 
 /* ---------- backup ---------- */
 const BK_KEY="planner-last-backup";
@@ -383,16 +585,19 @@ function renderBackupInfo(){
   el.className=days>=7?"warn":"";
 }
 $("bkSave").onclick=async()=>{
-  const data=JSON.stringify({app:"planner",format:1,exportedAt:new Date().toISOString(),tasks},null,2);
+  const data=JSON.stringify({app:"planner",format:2,exportedAt:new Date().toISOString(),tasks},null,2);
   const ok=await saveFile(`бэкап-ежедневника-${TODAY}.json`,data);
   if(ok){try{localStorage.setItem(BK_KEY,TODAY)}catch(e){}renderBackupInfo();toast(`Бэкап сохранён: ${tasks.length} задач`)}
 };
 let pending=null;
 function clean(t){
-  if(!t||typeof t!=="object"||!/^\d{4}-\d{2}-\d{2}$/.test(t.date||"")||!String(t.title||"").trim())return null;
+  const dRe=/^\d{4}-\d{2}-\d{2}$/;
+  if(!t||typeof t!=="object"||!dRe.test(t.date||"")||!String(t.title||"").trim())return null;
   const tm=v=>/^\d{2}:\d{2}$/.test(v||"")?v:"";
+  const moves=Array.isArray(t.moves)?t.moves.filter(m=>m&&dRe.test(m.from||"")&&dRe.test(m.to||"")).slice(0,50).map(m=>({from:m.from,to:m.to,reason:String(m.reason||"").slice(0,160)})):[];
   return{id:String(t.id||uid()).replace(/[^A-Za-z0-9_\-.~:@+]/g,"").slice(0,60)||uid(),date:t.date,start:tm(t.start),end:tm(t.end),
-    title:String(t.title).slice(0,200),project:PROJECTS[t.project]?t.project:"other",note:String(t.note||"").slice(0,1000),done:!!t.done};
+    title:String(t.title).slice(0,200),project:PROJECTS[t.project]?t.project:"other",note:String(t.note||"").slice(0,1000),done:!!t.done,
+    important:!!t.important,waiting:!!t.waiting,waitSince:dRe.test(t.waitSince||"")?t.waitSince:"",waitFor:String(t.waitFor||"").slice(0,200),moves};
 }
 $("bkFile").addEventListener("change",async e=>{
   const f=e.target.files[0];e.target.value="";if(!f)return;
@@ -401,7 +606,7 @@ $("bkFile").addEventListener("change",async e=>{
   if(!list.length){toast("В файле нет задач для восстановления");return}
   pending=list;
   const ds=list.map(t=>t.date).sort();
-  $("bkSummary").innerHTML=`В файле <b>${list.length}</b> задач с ${fmtShort(ds[0])} по ${fmtShort(ds[ds.length-1])}${raw?.exportedAt?`, бэкап от ${esc(raw.exportedAt.slice(0,10).split("-").reverse().join("."))}`:""}.<br>«Добавить» оставит текущие задачи и обновит совпадающие. «Заменить всё» удалит текущие (сейчас их ${tasks.length}).`;
+  $("bkSummary").innerHTML=`В файле <b>${list.length}</b> задач с ${fmtShort(ds[0])} по ${fmtShort(ds[ds.length-1])}${raw?.exportedAt?`, бэкап от ${esc(String(raw.exportedAt).slice(0,10).split("-").reverse().join("."))}`:""}.<br>«Добавить» оставит текущие задачи и обновит совпадающие. «Заменить всё» удалит текущие (сейчас их ${tasks.length}).`;
   $("bkReplace").textContent="Заменить всё";$("bkReplace").dataset.armed="";
   $("bkConfirm").hidden=false;
 });
@@ -415,9 +620,15 @@ $("bkReplace").onclick=async()=>{
   if(!pending)return;const list=pending;pending=null;$("bkConfirm").hidden=true;
   try{await store.bulk(list,true);toast(`Заменено: ${list.length} задач`)}catch(e){toast("Не удалось восстановить. Попробуйте ещё раз.")}
 };
-renderBackupInfo();
+
+/* ---------- navigation ---------- */
+$("prevW").onclick=()=>{week=addDays(week,-7);day=ymd(week);render()};
+$("nextW").onclick=()=>{week=addDays(week,7);day=ymd(week);render()};
+$("todayBtn").onclick=()=>{week=mondayOf(new Date());day=TODAY;render()};
+$("addBtn").onclick=()=>openForm(null);
+
+render();
 initStore();
 </script>
-
 </body>
 </html>
